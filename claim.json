@@ -1,0 +1,120 @@
+{
+    "resourceType": "Claim",
+    "type": {
+        "text": "IPD"
+    },
+    "billablePeriod": {
+        "start": "2021/09/05 15:09:34",
+        "end": "2021/09/05 15:09:34"
+    },
+    "created": "2021-09-13 11:00:39",
+    "enterer": {
+        "reference": "Practitioner/58914578-9586-4DEB-8122-C661172EBEF0"
+    },
+    "facility": {
+        "reference": "Location/B05F4E33-1937-48E2-A2BA-45A0D6371FB3"
+    },
+    "provider": {
+        "reference": "PractitionerRole/58914578-9586-4DEB-8122-C661172EBEF0"
+    },
+    "extension": [
+        {
+            "url": "nmcNumber",
+            "valueString": "420"
+        }
+    ],
+    "diagnosis": [
+        {
+            "sequence": 1,
+            "diagnosisCodeableConcept": {
+                "coding": [
+                    {
+                        "code": "A09"
+                    }
+                ]
+            },
+            "type": [
+                {
+                    "text": "icd_0"
+                }
+            ]
+        }
+    ],
+
+    
+    "item": [
+        {
+            "sequence": 1,
+            "category": {
+                "text": "service"
+            },
+            "productOrService": {
+                "text": "PO10"
+            },
+            "quantity": {
+                "value": "1"
+            },
+            "unitPrice": {
+                "value": "200"
+            }
+        },
+        {
+            "sequence": 2,
+            "category": {
+                "text": "service"
+            },
+            "productOrService": {
+                "text": "RADO5"
+            },
+            "quantity": {
+                "value": "1"
+            },
+            "unitPrice": {
+                "value": "400"
+            }
+        },
+        {
+            "sequence": 3,
+            "category": {
+                "text": "service"
+            },
+            "productOrService": {
+                "text": "PO08"
+            },
+            "quantity": {
+                "value": "1"
+            },
+            "unitPrice": {
+                "value": "500"
+            }
+        },
+        {
+            "sequence": 4,
+            "category": {
+                "text": "service"
+            },
+            "productOrService": {
+                "text": "RADO5"
+            },
+            "quantity": {
+                "value": "1"
+            },
+            "unitPrice": {
+                "value": "400"
+            }
+        }
+    ],
+    "total": {
+        "value": 1500
+    },
+    "patient": {
+        "reference": "Patient/4D919079-E746-4D91-AB9E-F78BF0AECB8A"
+    },
+    "supportingInfo": [
+        {
+        "category": {
+            "text": "explanation"
+        },
+      "valueString": "ok xa ni ta"}  
+    ]
+}

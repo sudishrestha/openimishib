@@ -1,0 +1,10 @@
+increase length of claimcode
+
+ALTER TABLE tblClaim 
+ALTER COLUMN ClaimCode nvarchar(20);
+
+Also change the length in uspUpdateClaimFromPhone
+
+Add nmcNumber
+
+Alter table tblClaim ADD  nmcNumber varchar(20);
