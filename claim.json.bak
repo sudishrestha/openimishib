@@ -59,6 +59,21 @@
             }
         },
         {
+            "sequence": 2,
+            "category": {
+                "text": "service"
+            },
+            "productOrService": {
+                "text": "RADO5"
+            },
+            "quantity": {
+                "value": "1"
+            },
+            "unitPrice": {
+                "value": "400"
+            }
+        },
+        {
             "sequence": 3,
             "category": {
                 "text": "service"
@@ -86,13 +101,7 @@
             },
             "unitPrice": {
                 "value": "400"
-            },
-            "extension": [
-                {
-                    "url": "explanation",
-                    "valueString": "yo ausadhi ko chai khai k xa thaha vayena"
-                }
-            ]
+            }
         }
     ],
     "total": {

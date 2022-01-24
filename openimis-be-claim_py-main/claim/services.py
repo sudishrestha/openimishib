@@ -10,37 +10,42 @@ from django.conf import settings
 
 @core.comparable
 class ClaimElementSubmit(object):
-    def __init__(self, type, code, quantity, price=None):
+    def __init__(self, type, code, quantity, price=None,explanation=None):
         self.type = type
         self.code = code
         self.price = price
         self.quantity = quantity
+        self.explanation = explanation
 
     def add_to_xmlelt(self, xmlelt):
         item = ET.SubElement(xmlelt, self.type)
         ET.SubElement(item, "%sCode" % self.type).text = "%s" % self.code
         if self.price:
             ET.SubElement(item, "%sPrice" % self.type).text = "%s" % self.price
+        if self.explanation:
+            ET.SubElement(item, "%sExplanation" % self.type).text = "%s" % self.explanation
         ET.SubElement(item, "%sQuantity" %
                       self.type).text = "%s" % self.quantity
 
 
 @core.comparable
 class ClaimItemSubmit(ClaimElementSubmit):
-    def __init__(self, code, quantity, price=None):
+    def __init__(self, code, quantity, price=None,explanation=None):
         super().__init__(type='Item',
                          code=code,
                          price=price,
-                         quantity=quantity)
+                         quantity=quantity,
+                         explanation=explanation)
 
 
 @core.comparable
 class ClaimServiceSubmit(ClaimElementSubmit):
-    def __init__(self, code, quantity, price=None):
+    def __init__(self, code, quantity, price=None,explanation=None):
         super().__init__(type='Service',
                          code=code,
                          price=price,
-                         quantity=quantity)
+                         quantity=quantity,
+                         explanation=explanation)
 
 
 @core.comparable
@@ -175,7 +180,7 @@ class ClaimSubmitService(object):
                 EXEC @ret = [dbo].[uspUpdateClaimFromPhone] @XML = %s;
                 SELECT @ret;
             """
-
+            print(claim_submit.to_xml())
             cur.execute(sql, (claim_submit.to_xml(),))
             for i in range(int(ClaimConfig.claim_uspUpdateClaimFromPhone_intermediate_sets)):
                 cur.nextset()

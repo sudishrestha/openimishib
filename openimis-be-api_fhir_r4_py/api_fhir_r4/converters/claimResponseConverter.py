@@ -42,6 +42,8 @@ class ClaimResponseConverter(BaseFHIRConverter):
         cls.build_fhir_insurer(fhir_claim_response, imis_claim)
         cls.build_fhir_requestor(fhir_claim_response, imis_claim)
         cls.build_fhir_billable_period(fhir_claim_response, imis_claim)
+        cls.build_fhir_explanation(fhir_claim_response, imis_claim)
+        cls.build_fhir_nmc(fhir_claim_response, imis_claim)
         cls.build_fhir_diagnoses(fhir_claim_response, imis_claim)
         cls.build_fhir_adjustment(fhir_claim_response, imis_claim)
         return fhir_claim_response
@@ -62,6 +64,20 @@ class ClaimResponseConverter(BaseFHIRConverter):
         cls.build_imis_diagnoses(imis_claim, fhir_claim_response)
         cls.build_imis_adjustment(imis_claim, fhir_claim_response)
         return imis_claim
+
+    @classmethod
+    def build_fhir_explanation(cls, fhir_claim_response, imis_claim):
+        extension = Extension()
+        extension.url = "explanation"
+        extension.valueString = imis_claim.explanation
+        fhir_claim_response.extension.append(extension)
+    
+    @classmethod
+    def build_fhir_nmc(cls, fhir_claim_response, imis_claim):
+        extension = Extension()
+        extension.url = "nmcNo"
+        extension.valueString = imis_claim.nmcNo
+        fhir_claim_response.extension.append(extension)
 
     @classmethod
     def build_fhir_outcome(cls, fhir_claim_response, imis_claim):
@@ -285,7 +301,16 @@ class ClaimResponseConverter(BaseFHIRConverter):
     @classmethod
     def build_fhir_type(cls, fhir_claim_response, imis_claim):
         if imis_claim.visit_type:
-            fhir_claim_response.type = cls.build_simple_codeable_concept(imis_claim.visit_type)
+            visitType= imis_claim.visit_type #cls.build_simple_codeable_concept(imis_claim.visit_type)
+            # print (visitType)
+            if visitType == "I":
+                fhir_claim_response.type = "IPD"
+            elif visitType == "O":
+                fhir_claim_response.type = "OPD"
+            elif visitType == "E":
+                fhir_claim_response.type = "Emergency"
+            else:
+                fhir_claim_response.type = "Unknown"
 
     @classmethod
     def build_imis_type(cls, imis_claim, fhir_claim_response):
@@ -327,7 +352,6 @@ class ClaimResponseConverter(BaseFHIRConverter):
         for claim_item in cls.generate_fhir_claim_items(imis_claim):
             type = claim_item.category.text
             code = claim_item.productOrService.text
-
             if type == R4ClaimConfig.get_fhir_claim_item_code():
                 serviced = cls.get_imis_claim_item_by_code(code, imis_claim.id)
             elif type == R4ClaimConfig.get_fhir_claim_service_code():
@@ -414,6 +438,11 @@ class ClaimResponseConverter(BaseFHIRConverter):
 
         serviced_extension = cls.build_serviced_extension(serviced_item, service_type)
         claim_response_item.extension.append(serviced_extension)
+        
+        extension = Extension()
+        extension.url= "explanation"
+        extension.valueString=item.explanation
+        claim_response_item.extension.append(extension)
 
         note = cls.build_process_note(fhir_claim_response, item.price_origin)
         if note:

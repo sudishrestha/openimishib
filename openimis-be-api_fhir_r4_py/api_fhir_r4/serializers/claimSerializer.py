@@ -35,6 +35,7 @@ class ClaimSerializer(BaseFHIRSerializer):
                                    item_submits=validated_data.get('submit_items'),
                                    service_submits=validated_data.get('submit_services'),
                                    comment=validated_data.get('explanation'),
+                                   nmcNo=validated_data.get('nmcNo'),
                                    )
         request = self.context.get("request")
         if request.user and request.user.has_perms(ClaimConfig.gql_mutation_create_claims_perms):

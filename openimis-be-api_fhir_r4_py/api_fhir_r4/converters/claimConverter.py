@@ -21,7 +21,7 @@ from api_fhir_r4.converters.activityDefinitionConverter import ActivityDefinitio
 from api_fhir_r4.converters.coverageConverter import CoverageConverter
 from api_fhir_r4.models import Claim as FHIRClaim, ClaimItem as FHIRClaimItem, Period, ClaimDiagnosis, Money, \
     ImisClaimIcdTypes, ClaimSupportingInfo, Quantity, Condition, Extension, Reference, CodeableConcept, ClaimInsurance, \
-    Attachment
+    Attachment,Extension
 from api_fhir_r4.utils import TimeUtils, FhirUtils, DbManagerUtils
 from api_fhir_r4.exceptions import FHIRRequestProcessException
 
@@ -32,7 +32,6 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
     @classmethod
     def to_fhir_obj(cls, imis_claim):
         fhir_claim = FHIRClaim()
-        print("DONE")
         cls.build_fhir_pk(fhir_claim, imis_claim.uuid)
         fhir_claim.created = imis_claim.date_claimed.isoformat()
         fhir_claim.facility = HealthcareServiceConverter.build_fhir_resource_reference(imis_claim.health_facility,imis_claim.health_facility.code)
@@ -54,15 +53,18 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
         cls.build_fhir_priority(fhir_claim)
         cls.build_fhir_status(fhir_claim)
         cls.build_fhir_insurance(fhir_claim, imis_claim)
-        cls.build_fhir_attachments(fhir_claim, imis_claim)
+        cls.build_fhir_attachments(fhir_claim, imis_claim)        
+        fhir_claim.extension = []
+        fhir_claim.extension.append(cls.build_fhir_explanation(fhir_claim, imis_claim))
+        fhir_claim.extension.append(cls.build_fhir_nmcNo(fhir_claim, imis_claim))
         return fhir_claim
-
     @classmethod
     def to_imis_obj(cls, fhir_claim, audit_user_id):
         errors = []
         imis_claim = Claim()
         cls.build_imis_date_claimed(imis_claim, fhir_claim, errors)
         cls.build_imis_health_facility(errors, fhir_claim, imis_claim)
+        cls.build_imis_nmc_number( imis_claim,fhir_claim,errors)
         cls.build_imis_identifier(imis_claim, fhir_claim, errors)
         cls.build_imis_patient(imis_claim, fhir_claim, errors)
         cls.build_imis_date_range(imis_claim, fhir_claim, errors)
@@ -76,6 +78,33 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
         # cls.build_imis_adjuster(imis_claim, fhir_claim, errors)
         cls.check_errors(errors)
         return imis_claim
+
+    @classmethod
+    def build_fhir_explanation(cls, fhir_claim, imis_claim):
+        extension = Extension()
+        extension.url = "explanation"
+        extension.valueString = imis_claim.explanation
+        return extension
+
+    
+    @classmethod
+    def build_fhir_nmcNo(cls, fhir_claim, imis_claim):
+        extension = Extension()
+        extension.url = "nmcNo"
+        extension.valueString = imis_claim.nmcNo
+        return extension
+
+    @classmethod
+    def build_imis_nmc_number(cls, imis_claim, fhir_claim, errors): 
+        value = None
+        if fhir_claim.extension:
+            for x in fhir_claim.extension:
+                if x.url == "nmcNumber":
+                    value = x.valueString
+        # value = cls.get_fhir_identifier_by_code(fhir_claim.identifier, Stu3IdentifierConfig.get_fhir_schema_code_type())
+        if value:
+            imis_claim.nmcNo = value
+        cls.valid_condition(imis_claim.nmcNo is None, gettext('Missing the NMC number'), errors)
 
     @classmethod
     def get_reference_obj_id(cls, imis_claim):
@@ -118,28 +147,25 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
         value = '78'
         if value:
             imis_claim.code = cls.generateCode(value)
-            # imis_claim.code = value
-            # print(value)
-            # print(imis_claim.code)
         cls.valid_condition(imis_claim.code is None, gettext('Missing the claim code'), errors)
 
     def generateCode(claimCodeInitials):
         code= None
         sql = """\
                 DECLARE @return_value int;
-                EXEC @return_value = [dbo].[uspGenerateClaimCode] @currentYear = '""" +claimCodeInitials +"""' ;      
+                EXEC @return_value = [dbo].[generateClaimCode] @year = '""" +claimCodeInitials +"""' ;      
                 SELECT	'Return Value' = @return_value;
+           
             """
         # print(sql)
         with connection.cursor() as cur:
             try:
                 cur.execute(sql)
-                result_set = cur.fetchone()[0]
-                code = claimCodeInitials + str("{:08d}".format(result_set))
-                print(code)
+                result_set = cur.fetchone()
+                code =  str(result_set[0])
             finally:
                 cur.close()    
-        connection.close()
+        connection.close() 
         return code
 
 
@@ -246,10 +272,10 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
             for diagnosis in diagnoses:
                 diagnosis_type = cls.get_diagnosis_type(diagnosis)
                 diagnosis_code = cls.get_diagnosis_code(diagnosis)
-                print(diagnosis_code)
-                print(diagnosis_type)
+                # print(diagnosis_code)
+                # print(diagnosis_type)
                 if diagnosis_type == ImisClaimIcdTypes.ICD_0.value:
-                    print("ICDO")
+                    # print("ICDO")
                     imis_claim.icd = cls.get_claim_diagnosis_by_code(diagnosis_code)
                     imis_claim.icd_code = diagnosis_code
                 elif diagnosis_type == ImisClaimIcdTypes.ICD_1.value:
@@ -341,7 +367,16 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
     @classmethod
     def build_fhir_type(cls, fhir_claim, imis_claim):
         if imis_claim.visit_type:
-            fhir_claim.type = cls.build_simple_codeable_concept(imis_claim.visit_type)
+            visitType= imis_claim.visit_type #cls.build_simple_codeable_concept(imis_claim.visit_type)
+            # print (visitType)
+            if visitType == "I":
+                fhir_claim.type = "IPD"
+            elif visitType == "O":
+                fhir_claim.type = "OPD"
+            elif visitType == "E":
+                fhir_claim.type = "Emergency"
+            else:
+                fhir_claim.type = "Unknown"
 
     @classmethod
     def build_imis_visit_type(cls, imis_claim, fhir_claim):
@@ -426,6 +461,10 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
             activity_definition = cls.build_activity_definition_extension(extension)
             fhir_item.extension.append(activity_definition)
 
+        extension = Extension()
+        extension.url= "explanation"
+        extension.valueString=item.explanation
+        fhir_item.extension.append(extension)
         fhir_claim.item.append(fhir_item)
 
     @classmethod
@@ -488,14 +527,16 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
         price_asked = cls.get_fhir_item_price_asked(fhir_item)
         qty_provided = cls.get_fhir_item_qty_provided(fhir_item)
         item_code = cls.get_fhir_item_code(fhir_item)
-        imis_items.append(ClaimItemSubmit(item_code, qty_provided, price_asked))
+        item_explanation = cls.get_fhir_item_explanation(fhir_item)
+        imis_items.append(ClaimItemSubmit(item_code, qty_provided, price_asked,item_explanation))
 
     @classmethod
     def build_imis_submit_service(cls, imis_services, fhir_item):
         price_asked = cls.get_fhir_item_price_asked(fhir_item)
         qty_provided = cls.get_fhir_item_qty_provided(fhir_item)
         service_code = cls.get_fhir_item_code(fhir_item)
-        imis_services.append(ClaimServiceSubmit(service_code, qty_provided, price_asked))
+        service_explanation = cls.get_fhir_item_explanation(fhir_item)
+        imis_services.append(ClaimServiceSubmit(service_code, qty_provided, price_asked,service_explanation))
 
     @classmethod
     def get_fhir_item_code(cls, fhir_item):
@@ -510,6 +551,16 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
         if fhir_item.quantity:
             qty_provided = fhir_item.quantity.value
         return qty_provided
+    
+    @classmethod
+    def get_fhir_item_explanation(cls, fhir_item):
+        explanation = None
+        if fhir_item.extension:
+            for x in fhir_item.extension:
+                if x.url == "explanation":
+                    explanation = x.valueString
+        return explanation
+
 
     @classmethod
     def get_fhir_item_price_asked(cls, fhir_item):
